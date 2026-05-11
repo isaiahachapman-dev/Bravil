@@ -1,0 +1,982 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>BRAVIL</title>
+<style>
+  /* base */
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --bg:#0B0F1B; --panel:#171B2E; --panel2:#1F2440; --nav:#0D1124;
+    --line:#332D5E;
+    --txt:#E5E7EB; --dim:#9CA3AF; --faint:#6B7280;
+    --amber:#F5A800; --amberDim:#C28800;
+    --violet:#9B5DE5; --violetDim:#6D3DBA; --violetGlow:#C58FFF;
+    --green:#2E7D55; --red:#C0392B; --yellow:#D49A00;
+    --mono:'IBM Plex Mono','Menlo','Consolas',monospace;
+  }
+  html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);
+    color:var(--txt);font-family:var(--mono);font-size:13px;line-height:1.3;
+    -webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+  /* faint diagonal hatch as bg texture */
+  body{background-image:
+    linear-gradient(135deg,rgba(155,93,229,0.04) 0px,rgba(155,93,229,0.04) 1px,transparent 1px,transparent 4px);
+    background-attachment:fixed}
+  button{font-family:var(--mono);font-size:13px;color:var(--txt);
+    background:var(--panel2);border:1px solid var(--line);
+    padding:8px 12px;cursor:pointer;text-transform:uppercase;letter-spacing:.04em}
+  button:hover{background:var(--panel);border-color:var(--violet)}
+  button:active{background:var(--amber);color:#000;border-color:var(--amber)}
+  button.primary{background:var(--amber);color:#000;border-color:var(--amber);font-weight:700}
+  button.primary:hover{background:var(--amberDim);border-color:var(--amberDim)}
+  button.violet{background:var(--violet);color:#fff;border-color:var(--violet);font-weight:700}
+  button.violet:hover{background:var(--violetDim);border-color:var(--violetDim)}
+  button.violet:active{background:var(--violetGlow);color:#000;border-color:var(--violetGlow)}
+  button.danger{border-color:var(--red);color:#FCA5A5}
+  button.danger:active{background:var(--red);color:#fff}
+  button.tiny{padding:4px 8px;font-size:11px}
+  input,select{font-family:var(--mono);font-size:13px;color:var(--txt);
+    background:#0B0F16;border:1px solid var(--line);padding:6px 8px;width:100%}
+  input:focus,select:focus{outline:none;border-color:var(--violet)}
+  label{font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;
+    display:block;margin-bottom:3px}
+
+  /* layout */
+  .app{display:grid;grid-template-columns:90px 1fr;height:100vh}
+  .nav{background:linear-gradient(180deg,#0D1124 0%,#1A1238 100%);
+    border-right:1px solid var(--violetDim);display:flex;flex-direction:column;
+    box-shadow:inset -1px 0 0 rgba(155,93,229,0.15)}
+  .brand{padding:12px 8px;border-bottom:1px solid var(--violetDim);text-align:center;
+    cursor:pointer;position:relative;overflow:hidden;background:rgba(155,93,229,0.08)}
+  .brand .name{font-size:14px;font-weight:700;letter-spacing:.1em;
+    background:linear-gradient(90deg,var(--amber) 0%,var(--violetGlow) 100%);
+    -webkit-background-clip:text;background-clip:text;color:transparent}
+  .brand .ver{font-size:9px;color:var(--violet);margin-top:2px;letter-spacing:.06em}
+  .brand .fade{position:absolute;inset:0;background:var(--amber);opacity:0;
+    transition:opacity 0s;pointer-events:none}
+  .brand.holding .fade{opacity:.25;transition:opacity 3s linear}
+  .tabs{flex:1;display:flex;flex-direction:column}
+  .tab{padding:14px 8px;text-align:center;border-bottom:1px solid var(--line);
+    color:var(--dim);font-size:11px;cursor:pointer;text-transform:uppercase;letter-spacing:.08em;
+    border-left:3px solid transparent;transition:border-color 120ms,color 120ms}
+  .tab:hover{background:rgba(155,93,229,0.08);color:var(--violetGlow)}
+  .tab.on{background:var(--bg);color:var(--violetGlow);border-left:3px solid var(--violet)}
+  .navfoot{padding:6px;font-size:9px;color:var(--faint);border-top:1px solid var(--violetDim);
+    background:rgba(155,93,229,0.05)}
+  .navfoot input{font-size:10px;padding:3px 5px}
+
+  .main{overflow-y:auto;overflow-x:hidden;padding:8px}
+  .pane{display:none}
+  .pane.on{display:block}
+  .panel{background:var(--panel);border:1px solid var(--line);margin-bottom:8px;
+    border-left:2px solid var(--violet)}
+  .panel h3{padding:6px 10px;font-size:10px;color:var(--amber);
+    background:linear-gradient(90deg,var(--panel2) 0%,rgba(155,93,229,0.12) 100%);
+    border-bottom:1px solid var(--violetDim);
+    text-transform:uppercase;letter-spacing:.1em;font-weight:700}
+  .panel .body{padding:8px 10px}
+  .row{display:flex;gap:6px;align-items:center;margin-bottom:6px}
+  .row:last-child{margin-bottom:0}
+  .row > *{flex:1;min-width:0}
+  .row > .nogrow{flex:0 0 auto}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}
+  .grid4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px}
+
+  /* jog pad */
+  .jog{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;
+    width:160px;margin:0 auto}
+  .jog button{padding:14px 0;font-size:14px}
+  .jog .blank{background:transparent;border:none;cursor:default}
+
+  /* heat readouts */
+  .heat{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .heatBox{background:#0B0F16;border:1px solid var(--line);padding:8px}
+  .heatBox .lbl{font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em}
+  .heatBox .val{font-size:20px;color:var(--amber);font-weight:700;margin-top:3px}
+  .heatBox .tgt{font-size:10px;color:var(--faint);margin-top:2px}
+  .heatBox.heating .val{color:var(--yellow)}
+
+  /* plates SVG */
+  .plateBed{display:flex;gap:8px}
+  .plateBed > .left{flex:1;min-width:0}
+  .plateBed > .right{width:200px}
+  .bedSvg{width:100%;background:#0B0F16;border:1px solid var(--line);display:block;
+    touch-action:manipulation}
+  .plateList{max-height:280px;overflow-y:auto;border:1px solid var(--line);
+    background:#0B0F16}
+  .plateItem{padding:6px 8px;border-bottom:1px solid var(--line);font-size:11px;cursor:pointer}
+  .plateItem.sel{background:var(--violet);color:#fff}
+  .plateItem .meta{font-size:9px;color:var(--faint)}
+  .plateItem.sel .meta{color:#E5D9FE}
+
+  /* queue */
+  .qList{max-height:240px;overflow-y:auto;border:1px solid var(--line);
+    background:#0B0F16;margin-bottom:6px}
+  .qItem{padding:6px 8px;border-bottom:1px solid var(--line);font-size:11px;
+    display:flex;gap:6px;align-items:center}
+  .qItem .what{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .qItem .idx{color:var(--faint);width:24px;text-align:right;flex:none}
+  .qItem.run{background:var(--green);color:#fff}
+  .qItem.done{opacity:.4}
+  .qItem.fail{background:var(--red);color:#fff}
+
+  /* log */
+  .logBox{background:#0B0F16;border:1px solid var(--line);height:380px;
+    overflow-y:auto;padding:6px 8px;font-size:11px}
+  .logL{padding:1px 0;border-bottom:1px solid #131A24;display:flex;gap:6px}
+  .logL .t{color:var(--faint);flex:none;width:60px}
+  .logL .m{flex:1;min-width:0;word-break:break-all}
+  .logL.err .m{color:#FCA5A5}
+  .logL.ok .m{color:#86EFAC}
+  .logL.cmd .m{color:var(--amber)}
+
+  /* utility */
+  .toggleRow{display:flex;gap:4px}
+  .toggleRow button{flex:1}
+  .toggleRow button.on{background:var(--amber);color:#000;border-color:var(--amber)}
+  .toggleRow.violet button.on{background:var(--violet);color:#fff;border-color:var(--violet)}
+
+  /* status / setting pill */
+  .settingRow{display:flex;align-items:center;gap:8px;padding:6px 10px;
+    background:rgba(155,93,229,0.06);border:1px solid var(--violetDim);
+    margin-bottom:8px;font-size:11px}
+  .settingRow .lbl{color:var(--violetGlow);text-transform:uppercase;letter-spacing:.08em;
+    font-size:10px;flex:1}
+  .switch{position:relative;width:42px;height:22px;background:#0B0F16;
+    border:1px solid var(--violetDim);border-radius:11px;cursor:pointer;flex:none}
+  .switch::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;
+    background:var(--faint);border-radius:50%;transition:left 150ms,background 150ms}
+  .switch.on{background:rgba(155,93,229,0.25);border-color:var(--violet)}
+  .switch.on::after{left:22px;background:var(--violetGlow)}
+  .switch .stxt{position:absolute;top:50%;transform:translateY(-50%);font-size:8px;
+    color:var(--faint);font-weight:700;letter-spacing:.08em}
+  .switch .stxt.off{right:6px}
+  .switch .stxt.onx{left:6px;color:var(--violetGlow);opacity:0;transition:opacity 150ms}
+  .switch.on .stxt.onx{opacity:1}
+  .switch.on .stxt.off{opacity:0}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!--  nav  -->
+  <div class="nav">
+    <div class="brand" id="brand">
+      <div class="name">BRAVIL</div>
+      <div class="ver">v0.5</div>
+      <div class="fade"></div>
+    </div>
+    <div class="tabs">
+      <div class="tab on" data-pane="move">Move</div>
+      <div class="tab" data-pane="plates">Plates</div>
+      <div class="tab" data-pane="queue">Queue</div>
+      <div class="tab" data-pane="log">Log</div>
+    </div>
+    <div class="navfoot">
+      <label>Host</label>
+      <input id="host" value="localhost:7125">
+      <div id="conn" style="margin-top:4px">●&nbsp;<span id="connTxt">init</span></div>
+    </div>
+  </div>
+
+  <!--  main  -->
+  <div class="main">
+
+    <!--  MOVE  -->
+    <div class="pane on" id="paneMove">
+
+      <div class="panel">
+        <h3>Position</h3>
+        <div class="body">
+          <div class="settingRow">
+            <span class="lbl">Z homing</span>
+            <span style="font-size:10px;color:var(--faint)">When off, Home All and ⌂ skip the Z axis</span>
+            <div class="switch on" id="swZHome">
+              <span class="stxt off">OFF</span>
+              <span class="stxt onx">ON</span>
+            </div>
+          </div>
+          <div class="row">
+            <div><label>X</label><input id="posX" readonly value="0.00"></div>
+            <div><label>Y</label><input id="posY" readonly value="0.00"></div>
+            <div><label>Z</label><input id="posZ" readonly value="0.00"></div>
+            <div class="nogrow"><button id="btnHomeAll" class="primary">Home All</button></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>Jog</h3>
+        <div class="body">
+          <div class="grid2" style="align-items:start">
+            <div>
+              <div class="jog">
+                <button class="blank"></button>
+                <button data-dir="back">↑</button>
+                <button class="blank"></button>
+                <button data-dir="left">←</button>
+                <button data-dir="home">⌂</button>
+                <button data-dir="right">→</button>
+                <button class="blank"></button>
+                <button data-dir="front">↓</button>
+                <button class="blank"></button>
+              </div>
+            </div>
+            <div>
+              <label>Step (mm)</label>
+              <div class="toggleRow">
+                <button data-step="0.1">0.1</button>
+                <button data-step="1" class="on">1</button>
+                <button data-step="10">10</button>
+                <button data-step="50">50</button>
+              </div>
+              <label style="margin-top:8px">Z axis</label>
+              <div class="grid2">
+                <button data-jog="z+">Z+</button>
+                <button data-jog="z-">Z-</button>
+              </div>
+              <label style="margin-top:8px">Go to (absolute)</label>
+              <div class="row">
+                <input id="gtX" placeholder="X" value="0">
+                <input id="gtY" placeholder="Y" value="0">
+                <button id="btnGoTo" class="nogrow">Go</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>Pumps</h3>
+        <div class="body">
+          <div class="row">
+            <div>
+              <label>Pump</label>
+              <select id="pP">
+                <option value="all">All</option>
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+              </select>
+            </div>
+            <div><label>Volume (uL)</label><input id="pV" value="1.0"></div>
+            <div><label>Speed</label><input id="pS" value="100"></div>
+          </div>
+          <div class="row" style="margin-top:8px">
+            <button id="btnDispense" class="primary">Dispense</button>
+            <button id="btnReverse">Reverse</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>Nozzle Spacing</h3>
+        <div class="body">
+          <div class="row">
+            <button id="btnHomeNozzles" class="primary nogrow">Home Nozzles</button>
+            <div style="flex:1">
+              <label>Target (mm)</label>
+              <input id="spTarget" value="19.30">
+            </div>
+            <button id="btnSetSpacing" class="nogrow">Set</button>
+          </div>
+          <div class="row" style="margin-top:6px">
+            <label style="margin:0;align-self:center;flex:0 0 60px">Presets:</label>
+            <button data-preset="6">6</button>
+            <button data-preset="12">12</button>
+            <button data-preset="24">24</button>
+            <button data-preset="96">96</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>Heat</h3>
+        <div class="body">
+          <div class="heat">
+            <div class="heatBox" id="hbPad">
+              <div class="lbl">Pad</div>
+              <div class="val"><span id="padT">--</span> °C</div>
+              <div class="tgt">target <span id="padTgt">0</span></div>
+            </div>
+            <div class="heatBox" id="hbWire">
+              <div class="lbl">Wire</div>
+              <div class="val"><span id="wireT">--</span> °C</div>
+              <div class="tgt">target <span id="wireTgt">0</span></div>
+            </div>
+          </div>
+          <div class="row" style="margin-top:8px">
+            <div>
+              <label>Zone</label>
+              <select id="hZone"><option value="PAD">Pad</option><option value="WIRE">Wire</option></select>
+            </div>
+            <div><label>Temp °C</label><input id="hTemp" value="35"></div>
+            <button id="btnSetHeat" class="primary nogrow">Set</button>
+            <button id="btnHeatOff" class="danger nogrow">Off</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!--  PLATES  -->
+    <div class="pane" id="panePlates">
+      <div class="panel">
+        <h3>Bed Layout</h3>
+        <div class="body">
+          <div class="plateBed">
+            <div class="left">
+              <svg id="bedSvg" class="bedSvg" viewBox="0 0 590 240"></svg>
+              <div style="margin-top:6px;font-size:10px;color:var(--faint)">
+                Tap a plate to select. Edit position, volume, and orientation in the side panel.
+              </div>
+            </div>
+            <div class="right">
+              <label>Add plate of type</label>
+              <div class="grid4" style="margin-bottom:8px">
+                <button class="violet" data-add="6">6</button>
+                <button class="violet" data-add="12">12</button>
+                <button class="violet" data-add="24">24</button>
+                <button class="violet" data-add="96">96</button>
+              </div>
+              <div class="row" style="margin-bottom:8px">
+                <button id="btnDetect" class="primary" style="flex:1"> Detect plate</button>
+              </div>
+              <label>Placed plates</label>
+              <div class="plateList" id="plateList"></div>
+              <div id="plateEdit" style="margin-top:8px;display:none">
+                <label>Selected</label>
+                <div class="row">
+                  <input id="pltX" placeholder="X">
+                  <input id="pltY" placeholder="Y">
+                </div>
+                <div class="row">
+                  <div><label>Volume (uL)</label><input id="pltVol" value="1.0"></div>
+                  <div>
+                    <label>Orient</label>
+                    <div class="toggleRow">
+                      <button data-orient="H" class="on">H</button>
+                      <button data-orient="V">V</button>
+                    </div>
+                  </div>
+                </div>
+                <div class="row" style="margin-top:6px">
+                  <button id="btnPltFill" class="primary">Fill Now</button>
+                  <button id="btnPltQueue">+ Queue</button>
+                  <button id="btnPltDel" class="danger nogrow">Del</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>Presets</h3>
+        <div class="body">
+          <div class="row">
+            <input id="presetName" placeholder="Preset name">
+            <button id="btnSavePreset" class="nogrow">Save</button>
+            <select id="presetSel" style="flex:2"></select>
+            <button id="btnLoadPreset" class="nogrow">Load</button>
+            <button id="btnDelPreset" class="danger nogrow">Del</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!--  QUEUE  -->
+    <div class="pane" id="paneQueue">
+      <div class="panel">
+        <h3>Queue</h3>
+        <div class="body">
+          <div class="qList" id="qList"></div>
+          <div class="row">
+            <button id="btnQueueRun" class="primary">Run</button>
+            <button id="btnQueueClear" class="danger">Clear</button>
+            <button id="btnQueueExport" class="nogrow">Export JSON</button>
+            <label style="display:flex;align-items:center;gap:6px;flex:0 0 auto;margin:0;font-size:10px;cursor:pointer">
+              <input type="checkbox" id="qSort" style="width:auto;margin:0">
+              Sort plates by format
+            </label>
+          </div>
+        </div>
+      </div>
+      <div class="panel">
+        <h3>Add Action</h3>
+        <div class="body">
+          <div class="row">
+            <button data-qadd="moveTo">+ Move to (gt)</button>
+            <button data-qadd="dispense">+ Dispense</button>
+            <button data-qadd="setHeat">+ Set heat</button>
+            <button data-qadd="heatOff">+ Heat off</button>
+            <button data-qadd="homeAll">+ Home all</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- LOG  -->
+    <div class="pane" id="paneLog">
+      <div class="panel">
+        <h3>Log</h3>
+        <div class="body">
+          <div class="logBox" id="logBox"></div>
+          <div class="row" style="margin-top:6px">
+            <button id="btnLogClear" class="danger nogrow">Clear</button>
+            <div style="font-size:10px;color:var(--faint);align-self:center">
+              Streams Moonraker responses, errors, and UI events.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Camera detection modal -->
+<div id="detectModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:100;align-items:center;justify-content:center;padding:20px">
+  <div style="background:var(--panel);border:1px solid var(--violet);border-left:3px solid var(--violet);max-width:96vw;max-height:96vh;display:flex;flex-direction:column">
+    <div style="padding:8px 12px;background:var(--panel2);border-bottom:1px solid var(--violetDim);display:flex;align-items:center;gap:10px">
+      <span style="color:var(--amber);font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase">Camera detection</span>
+      <span id="detectStatus" style="flex:1;font-size:11px;color:var(--dim)"></span>
+      <button id="btnDetectClose" class="tiny danger">×</button>
+    </div>
+    <div style="padding:10px;display:flex;flex-direction:column;gap:8px;align-items:center;overflow:auto">
+      <img id="detectImg" style="max-width:100%;max-height:60vh;border:1px solid var(--line);display:none">
+      <div id="detectResult" style="font-size:11px;color:var(--dim);text-align:center;min-height:18px"></div>
+      <div style="display:flex;gap:6px;width:100%;justify-content:center">
+        <button id="btnDetectRetry">Retry</button>
+        <button id="btnDetectUse" class="primary" disabled>Use detection</button>
+      </div>
+      <div style="font-size:10px;color:var(--faint)">
+        Detector host: <input id="detectHost" style="width:160px;display:inline-block;padding:2px 6px;font-size:10px" value="localhost:5000">
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+//run state
+const $=id=>document.getElementById(id);
+const LS={
+  get:(k,d)=>{try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}},
+  set:(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
+};
+const state={
+  step:1,
+  plates:LS.get('bravil.plates',[]),
+  selPlate:null,
+  queue:LS.get('bravil.queue',[]),
+  presets:LS.get('bravil.presets',{}),
+  qSort:LS.get('bravil.qSort',false),
+  zHome:LS.get('bravil.zHome',true),
+};
+$('host').value=LS.get('bravil.host','localhost:7125');
+$('host').oninput=()=>LS.set('bravil.host',$('host').value);
+$('qSort').checked=state.qSort;
+$('qSort').onchange=()=>{state.qSort=$('qSort').checked;LS.set('bravil.qSort',state.qSort)};
+
+//z toggle 
+function applyZHome(){
+  $('swZHome').classList.toggle('on',state.zHome);
+}
+applyZHome();
+$('swZHome').onclick=()=>{
+  state.zHome=!state.zHome;
+  LS.set('bravil.zHome',state.zHome);
+  applyZHome();
+  logL('Z homing '+(state.zHome?'enabled':'disabled'),'ok');
+};
+const homeMacro=()=>state.zHome?'homeAll':'homeXY';
+
+//log
+function logL(msg,cls=''){
+  const box=$('logBox');
+  const d=document.createElement('div');
+  d.className='logL '+cls;
+  const t=new Date().toTimeString().slice(0,8);
+  d.innerHTML='<span class="t">'+t+'</span><span class="m"></span>';
+  d.querySelector('.m').textContent=msg;
+  box.appendChild(d);
+  box.scrollTop=box.scrollHeight;
+  while(box.children.length>500)box.removeChild(box.firstChild);
+}
+$('btnLogClear').onclick=()=>{$('logBox').innerHTML=''};
+
+//moonraker
+const url=p=>'http://'+$('host').value+p;
+async function gc(script){
+  logL('> '+script,'cmd');
+  try{
+    const r=await fetch(url('/printer/gcode/script'),{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({script})});
+    if(!r.ok){const t=await r.text();logL('HTTP '+r.status+' '+t,'err');return false}
+    setConn(true);
+    return true;
+  }catch(e){logL('fetch fail: '+e.message,'err');setConn(false);return false}
+}
+async function fetchObj(qs){
+  try{
+    const r=await fetch(url('/printer/objects/query?'+qs));
+    if(!r.ok){setConn(false);return null}
+    setConn(true);
+    return await r.json();
+  }catch(e){setConn(false);return null}
+}
+function setConn(ok){
+  const el=$('conn');
+  el.style.color=ok?'#86EFAC':'#FCA5A5';
+  $('connTxt').textContent=ok?'ok':'no link';
+}
+setConn(false);
+
+//tabs 
+document.querySelectorAll('.tab').forEach(t=>{
+  t.onclick=()=>{
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));
+    document.querySelectorAll('.pane').forEach(x=>x.classList.remove('on'));
+    t.classList.add('on');
+    $('pane'+t.dataset.pane.charAt(0).toUpperCase()+t.dataset.pane.slice(1)).classList.add('on');
+    if(t.dataset.pane==='plates')drawBed();
+    if(t.dataset.pane==='queue')renderQueue();
+  };
+});
+
+// move tab
+document.querySelectorAll('[data-step]').forEach(b=>{
+  b.onclick=()=>{
+    document.querySelectorAll('[data-step]').forEach(x=>x.classList.remove('on'));
+    b.classList.add('on');
+    state.step=parseFloat(b.dataset.step);
+  };
+});
+//move
+document.querySelectorAll('[data-dir]').forEach(b=>{
+  b.onclick=()=>{
+    const d=b.dataset.dir;
+    if(d==='home'){gc(homeMacro());return}
+    const s=state.step;
+    const moves={'right':`G91\nG1 X-${s} F3000\nG90`,
+                 'left' :`G91\nG1 X${s} F3000\nG90`,
+                 'back' :`G91\nG1 Y-${s} F3000\nG90`,
+                 'front':`G91\nG1 Y${s} F3000\nG90`};
+    if(moves[d])gc(moves[d]);
+  };
+});
+document.querySelectorAll('[data-jog]').forEach(b=>{
+  b.onclick=()=>{
+    const j=b.dataset.jog;
+    const s=state.step;
+    const moves={'z+':`G91\nG1 Z${s} F300\nG90`,
+                 'z-':`G91\nG1 Z-${s} F300\nG90`};
+    if(moves[j])gc(moves[j]);
+  };
+});
+$('btnHomeAll').onclick=()=>gc(homeMacro());
+$('btnGoTo').onclick=()=>gc(`moveTo X=${$('gtX').value} Y=${$('gtY').value} F=6000`);
+
+//pump
+function pumpCmd(d){
+  const p=$('pP').value, v=$('pV').value, s=$('pS').value;
+  if(p==='all'){
+    if(d>0)gc(`dispenseAll VOLUME=${v} SPEED=${s}`);
+    else{
+      gc(`reversePump PUMP=1 VOLUME=${v} SPEED=${s}`);
+      gc(`reversePump PUMP=2 VOLUME=${v} SPEED=${s}`);
+      gc(`reversePump PUMP=3 VOLUME=${v} SPEED=${s}`);
+    }
+  }else{
+    gc(`${d>0?'dispense':'reversePump'} PUMP=${p} VOLUME=${v} SPEED=${s}`);
+  }
+}
+$('btnDispense').onclick=()=>pumpCmd(1);
+$('btnReverse').onclick=()=>pumpCmd(-1);
+
+//nozzle spacing
+$('btnHomeNozzles').onclick=()=>gc('homeNozzles');
+$('btnSetSpacing').onclick=()=>gc(`setSpacing TARGET=${$('spTarget').value}`);
+document.querySelectorAll('[data-preset]').forEach(b=>{
+  b.onclick=()=>{
+    const p=b.dataset.preset;
+    gc(`setSpacing PLATE=${p}`);
+    const m={6:39.12,12:26.00,24:19.30,96:9.00};
+    $('spTarget').value=m[p].toFixed(2);
+  };
+});
+
+//Heat control
+$('btnSetHeat').onclick=()=>gc(`setHeat ZONE=${$('hZone').value} TEMP=${$('hTemp').value}`);
+$('btnHeatOff').onclick=()=>gc(`heatOff ZONE=${$('hZone').value}`);
+
+//Heat data
+async function poll(){
+  const data=await fetchObj('heater_generic%20heatingPad&heater_generic%20heatingWire&toolhead');
+  if(data&&data.result){
+    const s=data.result.status||{};
+    const pad=s['heater_generic heatingPad'];
+    const wire=s['heater_generic heatingWire'];
+    if(pad){
+      $('padT').textContent=pad.temperature?pad.temperature.toFixed(1):'--';
+      $('padTgt').textContent=(pad.target||0).toFixed(0);
+      $('hbPad').classList.toggle('heating',(pad.target||0)>0);
+    }
+    if(wire){
+      $('wireT').textContent=wire.temperature?wire.temperature.toFixed(1):'--';
+      $('wireTgt').textContent=(wire.target||0).toFixed(0);
+      $('hbWire').classList.toggle('heating',(wire.target||0)>0);
+    }
+    const th=s.toolhead;
+    if(th&&th.position){
+      $('posX').value=th.position[0].toFixed(2);
+      $('posY').value=th.position[1].toFixed(2);
+      $('posZ').value=th.position[2].toFixed(2);
+    }
+  }
+}
+setInterval(poll,2000);
+poll();
+
+//Plates
+const PLATE_DIM={
+  6:{wH:3,wV:2,sp:39.12},
+  12:{wH:4,wV:3,sp:26.00},
+  24:{wH:6,wV:4,sp:19.30},
+  96:{wH:12,wV:8,sp:9.00},
+};
+const BED_W=590, BED_H=240;
+function plateRect(p){
+  const d=PLATE_DIM[p.wells];
+  const orient=p.orient||'H';
+  const wAxis=orient==='H'?d.wH:d.wV;
+  const hAxis=orient==='H'?d.wV:d.wH;
+  return {w:(wAxis-1)*d.sp+10,h:(hAxis-1)*d.sp+10,wAxis,hAxis,sp:d.sp};
+}
+function drawBed(){
+  const svg=$('bedSvg');
+  svg.innerHTML='';
+  const ns='http://www.w3.org/2000/svg';
+  // Origin (machine 0,0) is at the physical FRONT-RIGHT of the device..
+  const orig=document.createElementNS(ns,'circle');
+  orig.setAttribute('cx',BED_W);orig.setAttribute('cy',0);
+  orig.setAttribute('r',5);orig.setAttribute('fill','#F5A800');
+  svg.appendChild(orig);
+  // "FRONT" label 
+  const frontLbl=document.createElementNS(ns,'text');
+  frontLbl.setAttribute('x',BED_W/2);frontLbl.setAttribute('y',BED_H-6);
+  frontLbl.setAttribute('text-anchor','middle');
+  frontLbl.setAttribute('fill','#6B7280');
+  frontLbl.setAttribute('font-size','11');
+  frontLbl.setAttribute('font-family','IBM Plex Mono');
+  frontLbl.setAttribute('letter-spacing','0.2em');
+  frontLbl.textContent='FRONT';
+  svg.appendChild(frontLbl);
+  state.plates.forEach((p,i)=>{
+    const r=plateRect(p);
+    const g=document.createElementNS(ns,'g');
+    // SVG x = BED_W - machineX - plateW;  SVG y = machineY;
+    const sx=BED_W-(p.x-5)-r.w;
+    const sy=p.y-5;
+    g.setAttribute('transform',`translate(${sx},${sy})`);
+    g.dataset.idx=i;
+    const rect=document.createElementNS(ns,'rect');
+    rect.setAttribute('width',r.w);rect.setAttribute('height',r.h);
+    rect.setAttribute('fill',state.selPlate===i?'#9B5DE5':'#1A2230');
+    rect.setAttribute('stroke','#9B5DE5');
+    rect.setAttribute('stroke-width',1.5);
+    g.appendChild(rect);
+    for(let row=0;row<r.hAxis;row++){
+      for(let col=0;col<r.wAxis;col++){
+        const c=document.createElementNS(ns,'circle');
+        c.setAttribute('cx',5+col*r.sp);
+        c.setAttribute('cy',5+row*r.sp);
+        c.setAttribute('r',Math.max(2,Math.min(r.sp/3,8)));
+        c.setAttribute('fill','none');
+        c.setAttribute('stroke',state.selPlate===i?'#fff':'#9B5DE5');
+        c.setAttribute('stroke-width',1);
+        g.appendChild(c);
+      }
+    }
+    const lbl=document.createElementNS(ns,'text');
+    lbl.setAttribute('x',r.w/2);lbl.setAttribute('y',-3);
+    lbl.setAttribute('text-anchor','middle');
+    lbl.setAttribute('fill',state.selPlate===i?'#F5A800':'#9B5DE5');
+    lbl.setAttribute('font-size','10');
+    lbl.setAttribute('font-family','IBM Plex Mono');
+    lbl.textContent=p.wells+'-well · '+(p.orient||'H');
+    g.appendChild(lbl);
+    g.style.cursor='pointer';
+    g.onclick=e=>{e.stopPropagation();selectPlate(i)};
+    svg.appendChild(g);
+  });
+  renderPlateList();
+}
+function renderPlateList(){
+  const box=$('plateList');
+  box.innerHTML='';
+  state.plates.forEach((p,i)=>{
+    const d=document.createElement('div');
+    d.className='plateItem'+(state.selPlate===i?' sel':'');
+    d.innerHTML=`<div>${p.wells}-well @ (${p.x.toFixed(0)}, ${p.y.toFixed(0)})</div>
+                 <div class="meta">${p.orient||'H'} · ${(p.vol||1).toFixed(1)} mL</div>`;
+    d.onclick=()=>selectPlate(i);
+    box.appendChild(d);
+  });
+  if(state.plates.length===0){
+    box.innerHTML='<div style="padding:8px;color:var(--faint);font-size:10px">No plates placed.</div>';
+  }
+}
+function selectPlate(i){
+  state.selPlate=(state.selPlate===i)?null:i;
+  drawBed();
+  const ed=$('plateEdit');
+  if(state.selPlate==null){ed.style.display='none';return}
+  const p=state.plates[i];
+  ed.style.display='block';
+  $('pltX').value=p.x;$('pltY').value=p.y;$('pltVol').value=p.vol||1;
+  document.querySelectorAll('[data-orient]').forEach(b=>{
+    b.classList.toggle('on',b.dataset.orient===(p.orient||'H'));
+  });
+}
+function savePlates(){LS.set('bravil.plates',state.plates)}
+document.querySelectorAll('[data-add]').forEach(b=>{
+  b.onclick=()=>{
+    const wells=parseInt(b.dataset.add);
+    state.plates.push({wells,x:0,y:0,vol:1000.0,orient:'H'});
+    state.selPlate=null;
+    savePlates();
+    selectPlate(state.plates.length-1);
+  };
+});
+$('pltX').oninput=()=>{if(state.selPlate!=null){state.plates[state.selPlate].x=parseFloat($('pltX').value)||0;savePlates();drawBed()}};
+$('pltY').oninput=()=>{if(state.selPlate!=null){state.plates[state.selPlate].y=parseFloat($('pltY').value)||0;savePlates();drawBed()}};
+$('pltVol').oninput=()=>{if(state.selPlate!=null){state.plates[state.selPlate].vol=parseFloat($('pltVol').value)||1;savePlates();renderPlateList()}};
+document.querySelectorAll('[data-orient]').forEach(b=>{
+  b.onclick=()=>{
+    if(state.selPlate==null)return;
+    state.plates[state.selPlate].orient=b.dataset.orient;
+    document.querySelectorAll('[data-orient]').forEach(x=>x.classList.toggle('on',x===b));
+    savePlates();drawBed();
+  };
+});
+$('btnPltFill').onclick=()=>{
+  if(state.selPlate==null)return;
+  const p=state.plates[state.selPlate];
+  gc(`fillPlate X=${p.x} Y=${p.y} WELLS=${p.wells} ORIENT=${p.orient||'H'} VOLUME=${p.vol||1}`);
+};
+$('btnPltQueue').onclick=()=>{
+  if(state.selPlate==null)return;
+  const p=state.plates[state.selPlate];
+  state.queue.push({type:'fillPlate',x:p.x,y:p.y,wells:p.wells,orient:p.orient||'H',vol:p.vol||1});
+  LS.set('bravil.queue',state.queue);
+  logL('Queued plate fill: '+p.wells+'-well '+(p.orient||'H'),'ok');
+};
+$('btnPltDel').onclick=()=>{
+  if(state.selPlate==null)return;
+  state.plates.splice(state.selPlate,1);
+  state.selPlate=null;
+  savePlates();drawBed();
+  $('plateEdit').style.display='none';
+};
+$('bedSvg').onclick=e=>{
+  if(e.target.tagName==='svg'){
+    state.selPlate=null;drawBed();$('plateEdit').style.display='none';
+  }
+};
+
+/* camera detection */
+$('detectHost').value=LS.get('bravil.detectHost','localhost:5000');
+$('detectHost').oninput=()=>LS.set('bravil.detectHost',$('detectHost').value);
+let lastDetection=null;
+function detectUrl(p){return 'http://'+$('detectHost').value+p}
+function setDetectStatus(s){$('detectStatus').textContent=s}
+async function runDetect(){
+  lastDetection=null;
+  $('btnDetectUse').disabled=true;
+  $('detectImg').style.display='none';
+  $('detectResult').textContent='';
+  setDetectStatus('capturing...');
+  try{
+    const r=await fetch(detectUrl('/detect'),{method:'POST'});
+    if(!r.ok){setDetectStatus('error '+r.status);return}
+    const j=await r.json();
+    if(!j.ok){
+      setDetectStatus('no plate found');
+      $('detectResult').innerHTML='Detection returned no recognizable plate.<br>Check lighting and plate placement, then retry.';
+      // diagnostics DATA
+      $('detectImg').src=detectUrl('/frame_annot.jpg?t='+Date.now());
+      $('detectImg').style.display='block';
+      return;
+    }
+    lastDetection=j;
+    $('detectImg').src=detectUrl('/frame_annot.jpg?t='+Date.now());
+    $('detectImg').style.display='block';
+    setDetectStatus('detected');
+    $('detectResult').innerHTML=
+      `<b>${j.wells}-well plate</b> · ${j.nRows}×${j.nCols} · `+
+      `A1 @ (${j.plateX_mm.toFixed(1)}, ${j.plateY_mm.toFixed(1)}) mm · `+
+      `${j.wellCenters.length} wells · ${j.pipeline}`;
+    $('btnDetectUse').disabled=false;
+  }catch(e){
+    setDetectStatus('connection failed');
+    $('detectResult').textContent='Could not reach detector at '+$('detectHost').value+': '+e.message;
+  }
+}
+$('btnDetect').onclick=()=>{
+  $('detectModal').style.display='flex';
+  runDetect();
+};
+$('btnDetectRetry').onclick=runDetect;
+$('btnDetectClose').onclick=()=>{$('detectModal').style.display='none'};
+$('btnDetectUse').onclick=()=>{
+  if(!lastDetection)return;
+  const j=lastDetection;
+  // If detected nCols > nRows, orient is H; otherwise V.
+  const orient=(j.nCols>=j.nRows)?'H':'V';
+  state.plates.push({
+    wells:j.wells,
+    x:Math.round(j.plateX_mm*10)/10,
+    y:Math.round(j.plateY_mm*10)/10,
+    vol:1.0,
+    orient:orient,
+  });
+  state.selPlate=null;
+  savePlates();
+  selectPlate(state.plates.length-1);
+  $('detectModal').style.display='none';
+  logL('Added '+j.wells+'-well plate from camera at ('+j.plateX_mm.toFixed(1)+', '+j.plateY_mm.toFixed(1)+')','ok');
+};
+
+/* plate presets */
+function refreshPresets(){
+  const sel=$('presetSel');
+  sel.innerHTML='<option value="">— preset —</option>';
+  Object.keys(state.presets).forEach(k=>{
+    const o=document.createElement('option');o.value=k;o.textContent=k;sel.appendChild(o);
+  });
+}
+refreshPresets();
+$('btnSavePreset').onclick=()=>{
+  const n=$('presetName').value.trim();if(!n)return;
+  state.presets[n]=JSON.parse(JSON.stringify(state.plates));
+  LS.set('bravil.presets',state.presets);refreshPresets();
+  logL('Saved preset: '+n,'ok');
+};
+$('btnLoadPreset').onclick=()=>{
+  const n=$('presetSel').value;if(!n||!state.presets[n])return;
+  state.plates=JSON.parse(JSON.stringify(state.presets[n]));
+  state.selPlate=null;savePlates();drawBed();
+};
+$('btnDelPreset').onclick=()=>{
+  const n=$('presetSel').value;if(!n)return;
+  delete state.presets[n];LS.set('bravil.presets',state.presets);refreshPresets();
+};
+
+/* queue tab */
+function qStr(a){
+  if(a.type==='fillPlate')return `fillPlate ${a.wells}w ${a.orient||'H'} @(${a.x},${a.y}) ${a.vol}mL`;
+  if(a.type==='moveTo')return `moveTo X=${a.x} Y=${a.y}`;
+  if(a.type==='dispense')return `dispense PUMP=${a.pump} V=${a.vol} S=${a.speed}`;
+  if(a.type==='setHeat')return `setHeat ${a.zone} ${a.temp}°C`;
+  if(a.type==='heatOff')return `heatOff ${a.zone||'ALL'}`;
+  if(a.type==='homeAll')return 'homeAll';
+  return JSON.stringify(a);
+}
+function actionToScript(a){
+  if(a.type==='fillPlate')return `fillPlate X=${a.x} Y=${a.y} WELLS=${a.wells} ORIENT=${a.orient||'H'} VOLUME=${a.vol}`;
+  if(a.type==='moveTo')return `moveTo X=${a.x} Y=${a.y} F=6000`;
+  if(a.type==='dispense')return `dispense PUMP=${a.pump} VOLUME=${a.vol} SPEED=${a.speed}`;
+  if(a.type==='setHeat')return `setHeat ZONE=${a.zone} TEMP=${a.temp}`;
+  if(a.type==='heatOff')return `heatOff ZONE=${a.zone||'ALL'}`;
+  if(a.type==='homeAll')return state.zHome?'homeAll':'homeXY';
+  return null;
+}
+function renderQueue(){
+  const box=$('qList');
+  box.innerHTML='';
+  if(state.queue.length===0){
+    box.innerHTML='<div style="padding:8px;color:var(--faint);font-size:10px">Queue empty.</div>';
+    return;
+  }
+  state.queue.forEach((a,i)=>{
+    const d=document.createElement('div');
+    d.className='qItem'+(a._st?' '+a._st:'');
+    d.innerHTML=`<span class="idx">${i+1}</span><span class="what"></span>`;
+    d.querySelector('.what').textContent=qStr(a);
+    const del=document.createElement('button');
+    del.className='tiny danger';del.textContent='×';
+    del.onclick=()=>{state.queue.splice(i,1);LS.set('bravil.queue',state.queue);renderQueue()};
+    d.appendChild(del);
+    box.appendChild(d);
+  });
+}
+$('btnQueueClear').onclick=()=>{state.queue=[];LS.set('bravil.queue',state.queue);renderQueue()};
+$('btnQueueExport').onclick=()=>{
+  const blob=new Blob([JSON.stringify(state.queue,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download='bravil-queue.json';a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+};
+$('btnQueueRun').onclick=async()=>{
+  let q=state.queue.map(a=>Object.assign({},a));
+  if(state.qSort){
+    // sort plates 
+    const idxs=[];const plates=[];
+    q.forEach((a,i)=>{if(a.type==='fillPlate'){idxs.push(i);plates.push(a)}});
+    plates.sort((a,b)=>a.wells-b.wells);
+    idxs.forEach((i,k)=>q[i]=plates[k]);
+    if(plates.length>1)logL('Queue plate order: '+plates.map(p=>p.wells).join(','),'ok');
+  }
+  state.queue=q;LS.set('bravil.queue',state.queue);
+  for(let i=0;i<state.queue.length;i++){
+    state.queue[i]._st='run';renderQueue();
+    const s=actionToScript(state.queue[i]);
+    let ok=false;
+    if(s)ok=await gc(s);
+    state.queue[i]._st=ok?'done':'fail';renderQueue();
+    if(!ok){logL('Queue halted at step '+(i+1),'err');break}
+  }
+};
+
+/* queue add-action */
+document.querySelectorAll('[data-qadd]').forEach(b=>{
+  b.onclick=()=>{
+    const t=b.dataset.qadd;
+    let a=null;
+    if(t==='moveTo')a={type:'moveTo',x:parseFloat($('gtX').value)||0,y:parseFloat($('gtY').value)||0};
+    if(t==='dispense')a={type:'dispense',pump:$('pP').value,vol:parseFloat($('pV').value)||1,speed:parseFloat($('pS').value)||100};
+    if(t==='setHeat')a={type:'setHeat',zone:$('hZone').value,temp:parseFloat($('hTemp').value)||35};
+    if(t==='heatOff')a={type:'heatOff',zone:$('hZone').value};
+    if(t==='homeAll')a={type:'homeAll'};
+    if(a){state.queue.push(a);LS.set('bravil.queue',state.queue);renderQueue();logL('+ '+qStr(a),'ok')}
+  };
+});
+
+/* brand long-press exit */
+let holdT=null;
+$('brand').addEventListener('pointerdown',()=>{
+  $('brand').classList.add('holding');
+  holdT=setTimeout(()=>{
+    logL('Kiosk exit (long-press)','ok');
+    try{window.close()}catch(e){}
+  },3000);
+});
+['pointerup','pointerleave','pointercancel'].forEach(ev=>{
+  $('brand').addEventListener(ev,()=>{
+    $('brand').classList.remove('holding');
+    if(holdT){clearTimeout(holdT);holdT=null}
+  });
+});
+
+/* init */
+renderQueue();
+drawBed();
+logL('UI ready','ok');
+</script>
+</body>
+</html>
