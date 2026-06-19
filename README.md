@@ -18,10 +18,12 @@ dispensing precision within +/-5% per 100 uL across formats. Validated over
 
 - **Motion** — NEMA 17 gantry on a BTT Octopus board running Klipper,
   positioned to sub-millimeter accuracy.
-- **Fluidics** — Kamoer peristaltic pump feeding a custom multi-nozzle array.
+- **Fluidics** — three peristaltic pumps feeding a custom multi-nozzle array
+  with motorized nozzle spacing for different plate pitches.
 - **Vision** — camera + OpenCV pipeline that detects well positions directly
   off the plate.
-- **Interface** — touchscreen UI for volume, temperature, and plate format.
+- **Interface** — touchscreen kiosk UI for jogging, dispensing, plate presets,
+  heat control, and a fill queue, talking to Klipper through Moonraker.
 
 ## My contribution
 
@@ -40,13 +42,41 @@ and the frame and twin-lead-screw motion mechanism.
 
 ## Repository structure
 
-- `firmware/` — Klipper config and macros
-- `software/vision/` — OpenCV detection pipeline
-- `software/ui/` — touchscreen control interface
-- `cad/` — CAD models and exports
-- `docs/` — design history file, figures, validation data
+```
+firmware/
+  printer.cfg              Klipper config: steppers, heaters, and fill macros
+software/
+  vision/
+    Cameradetection.py     OpenCV well-detection pipeline
+  ui/
+    klipper-control.html   Touchscreen kiosk UI (Moonraker REST)
+    installKiosk.sh        Raspberry Pi kiosk setup script
+```
+
+## Plate format support
+
+| Format | Firmware (fill macros) | Vision detection |
+|---|---|---|
+| 6-well   | Yes | Yes |
+| 12-well  | Yes | Yes |
+| 24-well  | Yes | In progress |
+| 96-well  | Yes | Planned |
+
+The motion and dispensing macros handle all four ANSI/SLAS formats. The vision
+pipeline currently auto-detects 6- and 12-well layouts; 24- and 96-well
+detection is in progress.
+
+## Running the vision pipeline
+
+```
+python Cameradetection.py path/to/plate.jpg
+```
+
+Outputs detected well coordinates in millimeters and a six-stage debug figure
+showing each step of the detection process.
 
 ## Team
 
 Six-person team, UC Riverside Department of Bioengineering. This repository is
-hosted as a personal portfolio record of the project.
+hosted as a personal portfolio record of the project. CAD models and the design
+history file are maintained separately and available on request.

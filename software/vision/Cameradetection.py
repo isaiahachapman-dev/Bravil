@@ -141,7 +141,7 @@ def main():
     if len(sys.argv) > 1:
         imagePath = sys.argv[1]
     else:
-        imagePath = r"C:\Users\Sp00k\Downloads\drive-download-20260409T184405Z-3-001\test24.jpg"
+        imagePath = "test24.jpg"
 
     if not os.path.isfile(imagePath):
         print("File not found: {}".format(imagePath))
@@ -232,4 +232,5 @@ def main():
     plt.show()
 
 
-main()
+if __name__ == "__main__":
+    main()
