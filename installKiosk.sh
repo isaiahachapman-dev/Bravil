@@ -1,8 +1,5 @@
 #!/bin/bash
-# installKiosk.sh - Deploy Bravil UI as fullscreen Chromium kiosk on Raspberry Pi 5.
 # Run with: sudo ./installKiosk.sh
-#
-# Idempotent. Re-running overwrites the launcher and autostart entry.
 
 set -euo pipefail
 
